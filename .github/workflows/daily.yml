@@ -1,10 +1,10 @@
+# .github/workflows/daily.yml
 name: daily-report
 
 on:
+  workflow_dispatch: {}          # allows manual runs
   schedule:
-    # 06:45 ET / 12:45 CEST (summer). Cron is UTC: adjust for DST as needed.
-    - cron: "45 10 * * 1-5"
-  workflow_dispatch: {}
+    - cron: "45 10 * * 1-5"      # weekdays 10:45 UTC ≈ 06:45 ET / 12:45 CEST
 
 jobs:
   run:
@@ -12,31 +12,28 @@ jobs:
     permissions:
       contents: write
       issues: write
-      discussions: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - run: pip install openai pytz
 
-      # Run the script with GPT-5 (change to gpt-5-mini if you prefer)
       - name: Generate report
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: gpt-5         # or: gpt-5-mini
+          OPENAI_MODEL: gpt-5       # or gpt-5-mini
         run: python daily_report.py
 
-      # Set the dynamic title output (must come BEFORE creating the issue)
       - name: Set dynamic title output
         id: title
         run: echo "value=$(cat report_title.txt)" >> "$GITHUB_OUTPUT"
 
-      # Create a new Issue each day (GitHub will email you the Issue)
       - name: Create issue with report
         uses: peter-evans/create-issue-from-file@v5
         with:
           title: ${{ steps.title.outputs.value }}
           content-filepath: report.md
+
